@@ -46,7 +46,11 @@ export function MobileHeader({
                 </svg>
               ) : (
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                 selectedChat.name?.charAt(0).toUpperCase() || "?"
+=======
+                getInitial(selectedChat.name)
+>>>>>>> Stashed changes
 =======
                 getInitial(selectedChat.name)
 >>>>>>> Stashed changes
