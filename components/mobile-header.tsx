@@ -45,19 +45,7 @@ export function MobileHeader({
                   <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
                 </svg>
               ) : (
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                selectedChat.name?.charAt(0).toUpperCase() || "?"
-=======
                 getInitial(selectedChat.name)
->>>>>>> Stashed changes
-=======
-                getInitial(selectedChat.name)
->>>>>>> Stashed changes
-=======
-                getInitial(selectedChat.name)
->>>>>>> Stashed changes
               )}
             </div>
             <div>
