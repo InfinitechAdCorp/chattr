@@ -70,14 +70,14 @@ export function UnfriendConfirmationModal({ friend, onClose, onConfirm }: Unfrie
           <div className="flex items-center space-x-4 mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
             <div className="relative">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
-                {friend.fullName.charAt(0).toUpperCase()}
+                {friend.full_name.charAt(0).toUpperCase()}
               </div>
               {friend.status === "online" && (
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full"></div>
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg text-gray-900 dark:text-white truncate">{friend.fullName}</h3>
+              <h3 className="font-semibold text-lg text-gray-900 dark:text-white truncate">{friend.full_name}</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 truncate">@{friend.username}</p>
               <div className="flex items-center space-x-2 mt-1">
                 <div className={`w-2 h-2 rounded-full ${friend.status === "online" ? "bg-green-400" : "bg-gray-400"}`}></div>
@@ -92,7 +92,7 @@ export function UnfriendConfirmationModal({ friend, onClose, onConfirm }: Unfrie
               <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                  Are you sure you want to remove {friend.fullName}?
+                  Are you sure you want to remove {friend.full_name}?
                 </h4>
                 <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
                   <li>• You will no longer be friends</li>

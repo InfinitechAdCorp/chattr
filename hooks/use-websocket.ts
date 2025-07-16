@@ -1,167 +1,151 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import Pusher from "pusher-js"
 import type { Message } from "@/types"
-
-interface WebSocketMessage {
-  type: "new_message" | "user_status" | "typing" | "message_read"
-  data: any
-}
 
 interface UseWebSocketProps {
   currentUserId: number
-  onNewMessage: (message: Message) => void
-  onUserStatusChange: (userId: number, status: "online" | "offline") => void
-  onTypingUpdate: (chatId: string, userId: number, isTyping: boolean) => void
-  onMessageRead: (chatId: string, messageId: number) => void
   enabled?: boolean
+  onNewMessage?: (message: Message) => void
+  onUserStatusChange?: (userId: number, status: "online" | "offline") => void
+  onTypingUpdate?: (chatId: string, userId: number, isTyping: boolean) => void
+  onMessageRead?: (chatId: string, messageId: number) => void
 }
 
 export function useWebSocket({
   currentUserId,
+  enabled = true,
   onNewMessage,
   onUserStatusChange,
   onTypingUpdate,
   onMessageRead,
-  enabled = false, // Disabled by default until WebSocket server is ready
 }: UseWebSocketProps) {
-  const ws = useRef<WebSocket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
-  const reconnectAttempts = useRef(0)
-  const maxReconnectAttempts = 3 // Reduced attempts to avoid spam
+  const pusherRef = useRef<Pusher | null>(null)
+  const channelsRef = useRef<Map<string, any>>(new Map())
 
-  const connect = () => {
-    if (!enabled) {
-      setIsConnected(false)
-      setIsConnecting(false)
-      return
-    }
+  useEffect(() => {
+    if (!enabled) return
 
-    if (isConnecting || (ws.current && ws.current.readyState === WebSocket.CONNECTING)) {
-      return
-    }
+    const connectWebSocket = async () => {
+      try {
+        setIsConnecting(true)
 
-    try {
-      setIsConnecting(true)
-      // In a real app, you'd get the auth token from cookies or context
-      const wsUrl = `ws://localhost:8080/ws?userId=${currentUserId}`
-      ws.current = new WebSocket(wsUrl)
+        // Get auth token for Pusher authentication
+        const token = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("auth_token="))
+          ?.split("=")[1]
 
-      const connectTimeout = setTimeout(() => {
-        if (ws.current && ws.current.readyState === WebSocket.CONNECTING) {
-          ws.current.close()
+        if (!token) {
+          console.error("No auth token found")
+          return
+        }
+
+        // Initialize Pusher
+        pusherRef.current = new Pusher("local", {
+          wsHost: "127.0.0.1",
+          wsPort: 6001,
+          wssPort: 6001,
+          forceTLS: false,
+          enabledTransports: ["ws", "wss"],
+          auth: {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+          authEndpoint: "/api/broadcasting/auth",
+          cluster: "mt1", // Add this line
+        })
+
+        pusherRef.current.connection.bind("connected", () => {
+          console.log("WebSocket connected")
+          setIsConnected(true)
           setIsConnecting(false)
-          console.log("WebSocket connection timeout")
-        }
-      }, 5000) // 5 second timeout
+        })
 
-      ws.current.onopen = () => {
-        console.log("WebSocket connected")
-        setIsConnected(true)
+        pusherRef.current.connection.bind("disconnected", () => {
+          console.log("WebSocket disconnected")
+          setIsConnected(false)
+        })
+
+        pusherRef.current.connection.bind("error", (error: any) => {
+          console.error("WebSocket error:", error)
+          setIsConnecting(false)
+        })
+      } catch (error) {
+        console.error("Failed to connect WebSocket:", error)
         setIsConnecting(false)
-        reconnectAttempts.current = 0
-        clearTimeout(connectTimeout)
       }
-
-      ws.current.onmessage = (event) => {
-        try {
-          const message: WebSocketMessage = JSON.parse(event.data)
-
-          switch (message.type) {
-            case "new_message":
-              onNewMessage(message.data)
-              break
-            case "user_status":
-              onUserStatusChange(message.data.userId, message.data.status)
-              break
-            case "typing":
-              onTypingUpdate(message.data.chatId, message.data.userId, message.data.isTyping)
-              break
-            case "message_read":
-              onMessageRead(message.data.chatId, message.data.messageId)
-              break
-          }
-        } catch (error) {
-          console.error("Error parsing WebSocket message:", error)
-        }
-      }
-
-      ws.current.onclose = () => {
-        console.log("WebSocket disconnected")
-        setIsConnected(false)
-        setIsConnecting(false)
-        clearTimeout(connectTimeout)
-
-        // Only attempt to reconnect if enabled and haven't exceeded max attempts
-        if (enabled && reconnectAttempts.current < maxReconnectAttempts) {
-          reconnectAttempts.current++
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000) // Max 10 seconds
-
-          reconnectTimeoutRef.current = setTimeout(() => {
-            console.log(`Attempting to reconnect... (${reconnectAttempts.current}/${maxReconnectAttempts})`)
-            connect()
-          }, delay)
-        } else if (reconnectAttempts.current >= maxReconnectAttempts) {
-          console.log("Max reconnection attempts reached. WebSocket disabled.")
-        }
-      }
-
-      ws.current.onerror = (error) => {
-        console.error("WebSocket error:", error)
-        setIsConnecting(false)
-        clearTimeout(connectTimeout)
-      }
-    } catch (error) {
-      console.error("Failed to connect WebSocket:", error)
-      setIsConnecting(false)
     }
+
+    connectWebSocket()
+
+    return () => {
+      if (pusherRef.current) {
+        pusherRef.current.disconnect()
+      }
+      channelsRef.current.clear()
+    }
+  }, [enabled])
+
+  const subscribeToChat = (chatId: string) => {
+    if (!pusherRef.current || !isConnected) return
+
+    const channelName = `private-chat.${chatId}`
+
+    if (channelsRef.current.has(channelName)) {
+      return // Already subscribed
+    }
+
+    const channel = pusherRef.current.subscribe(channelName)
+
+    channel.bind("App\\Events\\MessageSent", (data: any) => {
+      if (onNewMessage && data.senderId !== currentUserId) {
+        onNewMessage({
+          id: data.id,
+          chatId: data.chatId,
+          senderId: data.senderId,
+          senderName: data.senderName,
+          content: data.content,
+          timestamp: data.timestamp,
+        })
+      }
+    })
+
+    channelsRef.current.set(channelName, channel)
   }
 
-  const disconnect = () => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current)
-    }
-    if (ws.current) {
-      ws.current.close()
-    }
-    setIsConnected(false)
-    setIsConnecting(false)
-  }
+  const unsubscribeFromChat = (chatId: string) => {
+    if (!pusherRef.current) return
 
-  const sendMessage = (type: string, data: any) => {
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify({ type, data }))
-      return true
+    const channelName = `private-chat.${chatId}`
+    const channel = channelsRef.current.get(channelName)
+
+    if (channel) {
+      pusherRef.current.unsubscribe(channelName)
+      channelsRef.current.delete(channelName)
     }
-    return false
   }
 
   const sendTyping = (chatId: string, isTyping: boolean) => {
-    return sendMessage("typing", { chatId, isTyping })
+    // Implement typing indicators if needed
+    console.log(`User ${currentUserId} is ${isTyping ? "typing" : "stopped typing"} in chat ${chatId}`)
   }
 
   const markMessageAsRead = (chatId: string, messageId: number) => {
-    return sendMessage("message_read", { chatId, messageId })
+    // Implement read receipts if needed
+    console.log(`Message ${messageId} read in chat ${chatId}`)
   }
-
-  useEffect(() => {
-    if (enabled) {
-      connect()
-    } else {
-      disconnect()
-    }
-    
-    return disconnect
-  }, [currentUserId, enabled])
 
   return {
     isConnected,
     isConnecting,
+    subscribeToChat,
+    unsubscribeFromChat,
     sendTyping,
     markMessageAsRead,
-    reconnect: connect,
-    enabled,
   }
 }

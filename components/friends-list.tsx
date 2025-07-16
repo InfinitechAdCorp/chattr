@@ -26,10 +26,10 @@ export function FriendsList({ friends, onAddFriend, onStartChat }: FriendsListPr
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                    {friend.fullName.charAt(0)}
+                    {friend.full_name.charAt(0)}
                   </div>
                   <div>
-                    <h3 className="font-medium">{friend.fullName}</h3>
+                    <h3 className="font-medium">{friend.full_name}</h3>
                     <p className="text-sm text-gray-500">@{friend.username}</p>
                     <div className="flex items-center space-x-1">
                       <div

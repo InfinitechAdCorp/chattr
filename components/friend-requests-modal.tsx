@@ -12,7 +12,7 @@ interface FriendRequest {
   id: number
   userId: number
   username: string
-  fullName: string
+  full_name: string
   status: "online" | "offline"
   type: "incoming" | "outgoing"
   createdAt: string
@@ -210,7 +210,7 @@ export function FriendRequestsModal({ onClose, onRequestHandled }: FriendRequest
                           {/* Avatar */}
                           <div className="relative">
                             <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
-                              {request.fullName.charAt(0).toUpperCase()}
+                              {request.full_name.charAt(0).toUpperCase()}
                             </div>
                             {request.status === "online" && (
                               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></div>
@@ -221,7 +221,7 @@ export function FriendRequestsModal({ onClose, onRequestHandled }: FriendRequest
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-2">
                               <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                                {request.fullName}
+                                {request.full_name}
                               </h4>
                               {request.status === "online" && (
                                 <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-0 text-xs">
@@ -305,7 +305,7 @@ export function FriendRequestsModal({ onClose, onRequestHandled }: FriendRequest
                           {/* Avatar */}
                           <div className="relative">
                             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
-                              {request.fullName.charAt(0).toUpperCase()}
+                              {request.full_name.charAt(0).toUpperCase()}
                             </div>
                             {request.status === "online" && (
                               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></div>
@@ -316,7 +316,7 @@ export function FriendRequestsModal({ onClose, onRequestHandled }: FriendRequest
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-2">
                               <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                                {request.fullName}
+                                {request.full_name}
                               </h4>
                               <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-0 text-xs">
                                 Pending

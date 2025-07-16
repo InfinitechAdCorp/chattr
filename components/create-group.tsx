@@ -61,9 +61,9 @@ export function CreateGroupModal({ friends, onClose, onCreateGroup }: CreateGrou
                   />
                   <Label htmlFor={`friend-${friend.id}`} className="flex items-center space-x-2 cursor-pointer">
                     <div className="w-6 h-6 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                      {friend.fullName.charAt(0)}
+                      {friend.full_name.charAt(0)}
                     </div>
-                    <span>{friend.fullName}</span>
+                    <span>{friend.full_name}</span>
                   </Label>
                 </div>
               ))}

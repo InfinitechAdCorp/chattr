@@ -43,7 +43,7 @@ export function DesktopSidebarV2({
   const [isDark, setIsDark] = useState(true)
 
   // Safe access to user properties with fallbacks
-  const userFullName = currentUser?.fullName || currentUser?.username || "User"
+  const userFullName = currentUser?.full_name || currentUser?.username || "User"
   const userUsername = currentUser?.username || "user"
   const userId = currentUser?.id || 0
   const userInitial = userFullName.charAt(0).toUpperCase()

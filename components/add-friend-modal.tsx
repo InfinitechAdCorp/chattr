@@ -1,7 +1,5 @@
 "use client"
-
 import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,7 +21,7 @@ import {
 interface FriendSuggestion {
   id: number
   username: string
-  fullName: string
+  full_name: string
   status: "online" | "offline"
   suggestionType: "search" | "mutual" | "active" | "recommended"
   reason: string
@@ -36,14 +34,14 @@ interface PendingRequest {
   id: number
   userId: number
   username: string
-  fullName: string
+  full_name: string
   status: "online" | "offline"
   createdAt: string
 }
 
 interface AddFriendModalProps {
   onClose: () => void
-  onFriendRequestSent: () => void
+  onFriendRequestSent: () => void // This is the correct prop name
 }
 
 export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalProps) {
@@ -67,11 +65,9 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
     }
-
     searchTimeoutRef.current = setTimeout(() => {
       loadSuggestions(searchQuery)
     }, 300)
-
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current)
@@ -108,7 +104,6 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
 
   const handleSendFriendRequest = async (suggestion: FriendSuggestion) => {
     if (sendingRequests.has(suggestion.id) || sentRequests.has(suggestion.id)) return
-
     try {
       setSendingRequests((prev) => new Set(prev).add(suggestion.id))
       const response = await fetch("/api/friends/request", {
@@ -118,10 +113,9 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
         },
         body: JSON.stringify({ userId: suggestion.id }),
       })
-
       if (response.ok) {
         setSentRequests((prev) => new Set(prev).add(suggestion.id))
-        onFriendRequestSent()
+        onFriendRequestSent() // Call the prop to notify parent
         // Reload pending requests to show the new request
         loadPendingRequests()
       } else {
@@ -144,7 +138,6 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
       const response = await fetch(`/api/friends/requests/${request.id}/cancel`, {
         method: "DELETE",
       })
-
       if (response.ok) {
         setPendingRequests((prev) => prev.filter((r) => r.id !== request.id))
         onFriendRequestSent() // Refresh parent component
@@ -219,7 +212,6 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
         </div>
       )
     }
-
     if (sendingRequests.has(suggestion.id)) {
       return (
         <div className="flex items-center space-x-2">
@@ -228,7 +220,6 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
         </div>
       )
     }
-
     return (
       <div className="flex items-center space-x-2">
         <Send className="w-4 h-4" />
@@ -241,7 +232,6 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
     if (sentRequests.has(suggestion.id)) {
       return "px-4 py-2 bg-green-500 text-white rounded-lg font-medium cursor-default"
     }
-
     return "px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg font-medium transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
   }
 
@@ -272,7 +262,6 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
               <X className="w-5 h-5" />
             </Button>
           </div>
-
           {/* Tabs */}
           <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
             <button
@@ -307,7 +296,6 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
               </div>
             </button>
           </div>
-
           {/* Search Bar - Only show in search tab */}
           {activeTab === "search" && (
             <div className="relative mt-4">
@@ -326,7 +314,6 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
             </div>
           )}
         </div>
-
         {/* Content */}
         <div className="overflow-y-auto max-h-96 p-6">
           {activeTab === "search" ? (
@@ -358,7 +345,6 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
                         {typeSuggestions.length}
                       </span>
                     </div>
-
                     {/* Suggestions Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {typeSuggestions.map((suggestion) => (
@@ -372,7 +358,7 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
                               <div
                                 className={`w-12 h-12 bg-gradient-to-br ${getSuggestionColor(suggestion.suggestionType)} rounded-full flex items-center justify-center text-white font-semibold shadow-lg group-hover:scale-105 transition-transform`}
                               >
-                                {suggestion.fullName.charAt(0).toUpperCase()}
+                                {suggestion.full_name.charAt(0).toUpperCase()}
                               </div>
                               {suggestion.status === "online" && (
                                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full animate-pulse">
@@ -385,12 +371,11 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
                                 </div>
                               )}
                             </div>
-
                             {/* User Info */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center space-x-2">
                                 <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                                  {suggestion.fullName}
+                                  {suggestion.full_name}
                                 </h4>
                                 {suggestion.status === "online" && (
                                   <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-0 text-xs">
@@ -406,7 +391,6 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
                                 <span className="text-xs text-gray-500 dark:text-gray-400">{suggestion.reason}</span>
                               </div>
                             </div>
-
                             {/* Add Button */}
                             <Button
                               onClick={() => handleSendFriendRequest(suggestion)}
@@ -442,7 +426,6 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
                   {pendingRequests.length} pending
                 </Badge>
               </div>
-
               {pendingRequests.map((request) => (
                 <div
                   key={request.id}
@@ -452,7 +435,7 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
                     {/* Avatar */}
                     <div className="relative">
                       <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
-                        {request.fullName.charAt(0).toUpperCase()}
+                        {request.full_name.charAt(0).toUpperCase()}
                       </div>
                       {request.status === "online" && (
                         <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></div>
@@ -461,11 +444,10 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
                         <Clock className="w-2 h-2 text-white" />
                       </div>
                     </div>
-
                     {/* User Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
-                        <h4 className="font-semibold text-gray-900 dark:text-white truncate">{request.fullName}</h4>
+                        <h4 className="font-semibold text-gray-900 dark:text-white truncate">{request.full_name}</h4>
                         <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-0 text-xs">
                           Pending
                         </Badge>
@@ -483,7 +465,6 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
                         </span>
                       </div>
                     </div>
-
                     {/* Cancel Button */}
                     <Button
                       onClick={() => handleCancelRequest(request)}
@@ -501,7 +482,6 @@ export function AddFriendModal({ onClose, onFriendRequestSent }: AddFriendModalP
             </div>
           )}
         </div>
-
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">

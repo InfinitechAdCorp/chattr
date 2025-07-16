@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { MessageCircle, Users, UsersRound, LogOut, Settings, Moon, Sun, X } from "lucide-react"
+import { MessageCircle, Users, UsersRound, LogOut, Settings, Moon, Sun, X } from 'lucide-react'
 import { useState } from "react"
 import type { SidebarProps } from "@/types"
 
@@ -19,6 +19,14 @@ export function Sidebar({
   onClose,
 }: ExtendedSidebarProps) {
   const [isDark, setIsDark] = useState(false)
+
+  // Helper function to safely get first character
+  const getInitial = (name: string | undefined | null): string => {
+    if (!name || typeof name !== "string" || name.length === 0) {
+      return "?"
+    }
+    return name.charAt(0).toUpperCase()
+  }
 
   const menuItems = [
     { id: "chats", label: "Chats", icon: MessageCircle },
@@ -38,11 +46,11 @@ export function Sidebar({
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-              {currentUser.fullName.charAt(0).toUpperCase()}
+              {getInitial(currentUser?.full_name)}
             </div>
             <div>
-              <h3 className="font-medium text-gray-900 dark:text-white">{currentUser.fullName}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">@{currentUser.username}</p>
+              <h3 className="font-medium text-gray-900 dark:text-white">{currentUser?.full_name || "Unknown User"}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">@{currentUser?.username || "unknown"}</p>
             </div>
           </div>
           {onClose && (
@@ -112,7 +120,7 @@ export function Sidebar({
       {/* User Avatar */}
       <div className="p-3 border-b border-gray-200 dark:border-gray-700">
         <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-          {currentUser.fullName.charAt(0).toUpperCase()}
+          {getInitial(currentUser?.full_name)}
         </div>
       </div>
 

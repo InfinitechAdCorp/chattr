@@ -16,7 +16,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     username: "",
     email: "",
     password: "",
-    fullName: "",
+    full_name: "",
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -64,7 +64,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
           username: registerData.username,
           email: registerData.email,
           password: registerData.password,
-          full_name: registerData.fullName,
+          full_name: registerData.full_name,
         }),
       })
 
@@ -141,8 +141,8 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                     id="fullName"
                     type="text"
                     placeholder="Enter full name"
-                    value={registerData.fullName}
-                    onChange={(e) => setRegisterData({ ...registerData, fullName: e.target.value })}
+                    value={registerData.full_name}
+                    onChange={(e) => setRegisterData({ ...registerData, full_name: e.target.value })}
                     required
                     disabled={loading}
                   />

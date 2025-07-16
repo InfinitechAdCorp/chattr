@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Menu, X } from 'lucide-react'
+import { ArrowLeft, Menu, X } from "lucide-react"
 import type { User, Chat } from "@/types"
 
 interface MobileHeaderProps {
@@ -12,19 +12,30 @@ interface MobileHeaderProps {
   showMobileSidebar?: boolean
 }
 
-export function MobileHeader({ 
-  currentUser, 
-  activeView, 
-  selectedChat, 
-  onMenuClick, 
-  onBack, 
-  showMobileSidebar = false 
+export function MobileHeader({
+  currentUser,
+  activeView,
+  selectedChat,
+  onMenuClick,
+  onBack,
+  showMobileSidebar = false,
 }: MobileHeaderProps) {
+  // Helper function to safely get first character
+  const getInitial = (name: string | undefined | null): string => {
+    if (!name || typeof name !== "string" || name.length === 0) {
+      return "?"
+    }
+    return name.charAt(0).toUpperCase()
+  }
+
   return (
     <div className="fixed top-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between md:hidden">
       {selectedChat ? (
         <>
-          <button onClick={onBack} className="p-2 -ml-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+          <button
+            onClick={onBack}
+            className="p-2 -ml-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center space-x-3 flex-1 ml-2">
@@ -34,11 +45,17 @@ export function MobileHeader({
                   <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
                 </svg>
               ) : (
+<<<<<<< Updated upstream
                 selectedChat.name?.charAt(0).toUpperCase() || "?"
+=======
+                getInitial(selectedChat.name)
+>>>>>>> Stashed changes
               )}
             </div>
             <div>
-              <h3 className="font-medium text-gray-900 dark:text-white text-sm">{selectedChat.name}</h3>
+              <h3 className="font-medium text-gray-900 dark:text-white text-sm">
+                {selectedChat.name || "Unknown Chat"}
+              </h3>
               {selectedChat.type === "direct" && (
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {selectedChat.participant?.status === "online" ? "Online" : "Last seen recently"}
@@ -49,8 +66,8 @@ export function MobileHeader({
         </>
       ) : (
         <>
-          <button 
-            onClick={onMenuClick} 
+          <button
+            onClick={onMenuClick}
             className="p-2 -ml-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             {showMobileSidebar ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -61,7 +78,7 @@ export function MobileHeader({
             {activeView === "groups" && "Groups"}
           </h1>
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-xs">
-            {currentUser.fullName.charAt(0).toUpperCase()}
+            {getInitial(currentUser?.full_name)}
           </div>
         </>
       )}

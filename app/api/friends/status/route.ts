@@ -27,16 +27,15 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 3, de
   throw new Error(`Failed to fetch ${url} after ${retries} attempts.`)
 }
 
-export async function GET(request: NextRequest, { params }: { params: { chatId: string } }) {
-  const { chatId } = params
+export async function GET(request: NextRequest) {
   const token = request.cookies.get("auth_token")?.value
   if (!token) {
-    console.error(`API/chats/${chatId}/messages: Unauthorized - token missing`)
+    console.error("API/friends/status: Unauthorized - token missing")
     return NextResponse.json({ error: "Unauthorized - token missing" }, { status: 401 })
   }
 
-  const targetUrl = `${LARAVEL_API_URL}/chats/${chatId}/messages`
-  console.log(`API/chats/${chatId}/messages: Attempting to fetch from Laravel: ${targetUrl}`)
+  const targetUrl = `${LARAVEL_API_URL}/friends/status`
+  console.log(`API/friends/status: Attempting to fetch from Laravel: ${targetUrl}`)
 
   try {
     const response = await fetchWithRetry(targetUrl, {
@@ -50,14 +49,14 @@ export async function GET(request: NextRequest, { params }: { params: { chatId: 
     const data = await response.json()
 
     if (!response.ok) {
-      console.error(`API/chats/${chatId}/messages: Laravel responded with status ${response.status}:`, data)
+      console.error(`API/friends/status: Laravel responded with status ${response.status}:`, data)
       return NextResponse.json(data, { status: response.status })
     }
 
-    console.log(`API/chats/${chatId}/messages: Successfully fetched messages for chat ${chatId}.`)
+    console.log("API/friends/status: Successfully fetched friend statuses.")
     return NextResponse.json(data)
   } catch (error: any) {
-    console.error(`API/chats/${chatId}/messages: Error fetching messages from Laravel:`, error)
+    console.error("API/friends/status: Error fetching friend statuses from Laravel:", error)
     return NextResponse.json({ error: "Internal server error or connection refused" }, { status: 500 })
   }
 }

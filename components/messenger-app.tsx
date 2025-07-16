@@ -10,12 +10,12 @@ import { CreateGroupModal } from "@/components/create-group-modal"
 import { AddFriendModal } from "@/components/add-friend-modal"
 import { SearchBar } from "@/components/search-bar"
 import { ChatList } from "@/components/chat-list"
-import { OnlineFriends } from "@/components/online-friends"
+import OnlineFriends from "@/components/online-friends"
 import { MobileHeader } from "@/components/mobile-header"
 import { PWAInstallBanner } from "@/components/pwa-install-banner"
 import { PWAUpdateBanner } from "@/components/pwa-update-banner"
 import { OfflineIndicator } from "@/components/offline-indicator"
-import { useWebSocket } from "@/hooks/use-websocket"
+import { useSSE } from "@/hooks/use-sse" // Using useSSE
 import { useNotifications } from "@/hooks/use-notification"
 import { usePWA } from "@/hooks/use-pwa"
 import type { MessengerAppProps, Friend, Group, Chat, Message } from "@/types"
@@ -35,7 +35,7 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [loading, setLoading] = useState(true)
   const [typingUsers, setTypingUsers] = useState<Record<string, number[]>>({})
-  const [webSocketEnabled, setWebSocketEnabled] = useState(false) // Disabled by default
+  const [realTimeEnabled, setRealTimeEnabled] = useState(false) // Temporarily set to false
   const [showFriendRequests, setShowFriendRequests] = useState(false)
 
   // PWA hook for install/update functionality
@@ -52,17 +52,15 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
         await subscribeToPushNotifications()
       }
     }
-
     setupNotifications()
-  }, [isInstalled])
+  }, [isInstalled, requestNotificationPermission, subscribeToPushNotifications])
 
-  // WebSocket hook for real-time functionality (disabled by default)
-  const { isConnected, isConnecting, sendTyping, markMessageAsRead } = useWebSocket({
+  // SSE hook for real-time functionality
+  const { isConnected, isConnecting, subscribeToChat, unsubscribeFromChat, sendTyping, markMessageAsRead } = useSSE({
     currentUserId: currentUser.id,
-    enabled: webSocketEnabled,
+    enabled: realTimeEnabled,
     onNewMessage: (newMessage: Message) => {
       setMessages((prev) => [...prev, newMessage])
-
       // Update chat list with new message
       setChats((prev) =>
         prev
@@ -78,7 +76,6 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
           )
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
       )
-
       // Show notification if not in current chat
       if (selectedChat?.id !== newMessage.chatId) {
         const chat = chats.find((c) => c.id === newMessage.chatId)
@@ -88,12 +85,8 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
           chat?.type === "group" ? chat.name : newMessage.senderName,
         )
       }
-
       // Play notification sound
       playNotificationSound()
-    },
-    onUserStatusChange: (userId: number, status: "online" | "offline") => {
-      setFriends((prev) => prev.map((friend) => (friend.id === userId ? { ...friend, status } : friend)))
     },
     onTypingUpdate: (chatId: string, userId: number, isTyping: boolean) => {
       setTypingUsers((prev) => {
@@ -110,6 +103,62 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
       console.log(`Message ${messageId} read in chat ${chatId}`)
     },
   })
+
+  // Subscribe to chat when selected
+  useEffect(() => {
+    if (selectedChat && isConnected) {
+      subscribeToChat(selectedChat.id)
+    }
+    return () => {
+      if (selectedChat) {
+        unsubscribeFromChat(selectedChat.id)
+      }
+    }
+  }, [selectedChat, isConnected, subscribeToChat, unsubscribeFromChat])
+
+  // Subscribe to all user's chats for notifications (if applicable for SSE)
+  // For SSE, the server typically pushes all relevant events, so explicit client-side
+  // subscriptions per chat might not be necessary unless the server filters.
+  // If your SSE backend sends all messages for the current user, this loop might be redundant.
+  useEffect(() => {
+    if (isConnected && chats.length > 0) {
+      chats.forEach((chat) => {
+        subscribeToChat(chat.id)
+      })
+    }
+    return () => {
+      if (chats.length > 0) {
+        chats.forEach((chat) => {
+          unsubscribeFromChat(chat.id)
+        })
+      }
+    }
+  }, [isConnected, chats, subscribeToChat, unsubscribeFromChat])
+
+  // --- New: Polling for Friend Status ---
+  useEffect(() => {
+    const pollFriendStatuses = async () => {
+      try {
+        const response = await fetch("/api/friends/status") // New endpoint for friend statuses
+        if (response.ok) {
+          const statuses = await response.json() // Expects { friendId: "online" | "offline", ... }
+          setFriends((prevFriends) =>
+            prevFriends.map((friend) => ({
+              ...friend,
+              status: statuses[friend.id] || "offline", // Default to offline if not found
+            })),
+          )
+        }
+      } catch (error) {
+        console.error("Failed to poll friend statuses:", error)
+      }
+    }
+    // Poll every 5 seconds (adjust as needed)
+    const interval = setInterval(pollFriendStatuses, 5000)
+    // Initial fetch
+    pollFriendStatuses()
+    return () => clearInterval(interval)
+  }, []) // Empty dependency array to run once on mount
 
   // Play notification sound
   const playNotificationSound = () => {
@@ -156,24 +205,20 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
     const loadData = async () => {
       try {
         setLoading(true)
-
         // Load friends, groups, and chats in parallel
         const [friendsRes, groupsRes, chatsRes] = await Promise.all([
           fetch("/api/friends"),
           fetch("/api/groups"),
           fetch("/api/chats"),
         ])
-
         if (friendsRes.ok) {
           const friendsData = await friendsRes.json()
           setFriends(friendsData)
         }
-
         if (groupsRes.ok) {
           const groupsData = await groupsRes.json()
           setGroups(groupsData)
         }
-
         if (chatsRes.ok) {
           const chatsData = await chatsRes.json()
           setChats(
@@ -186,7 +231,6 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
         setLoading(false)
       }
     }
-
     loadData()
   }, [])
 
@@ -194,14 +238,12 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
   useEffect(() => {
     const loadMessages = async () => {
       if (!selectedChat) return
-
       try {
         const response = await fetch(`/api/chats/${selectedChat.id}/messages`)
         if (response.ok) {
           const messagesData = await response.json()
           setMessages(messagesData)
-
-          // Mark messages as read (only if WebSocket is connected)
+          // Mark messages as read (only if real-time is connected)
           if (messagesData.length > 0 && isConnected) {
             const lastMessage = messagesData[messagesData.length - 1]
             markMessageAsRead(selectedChat.id, lastMessage.id)
@@ -211,33 +253,29 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
         console.error("Failed to load messages:", error)
       }
     }
-
     loadMessages()
-  }, [selectedChat, isConnected])
+  }, [selectedChat, isConnected, markMessageAsRead])
 
   const handleSendMessage = async (content: string) => {
     if (!selectedChat) return
-
     try {
       const response = await fetch("/api/messages", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           chatId: selectedChat.id,
           content,
         }),
       })
-
       if (response.ok) {
         const newMessage = await response.json()
-
-        // If WebSocket is not connected, add message directly to state
+        // If real-time is not connected, add message directly to state
         if (!isConnected) {
           setMessages((prev) => [...prev, newMessage])
         }
-
         // Update the chat list
         setChats((prev) =>
           prev
@@ -263,10 +301,7 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
         },
         body: JSON.stringify(friendData),
       })
-
       if (response.ok) {
-        // Friend request sent successfully
-        // No need to update friends list since it's just a request
         console.log("Friend request sent successfully")
       } else {
         const errorData = await response.json()
@@ -274,7 +309,7 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
       }
     } catch (error) {
       console.error("Failed to send friend request:", error)
-      throw error // Re-throw to handle in modal
+      throw error
     }
   }
 
@@ -283,12 +318,8 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
       const response = await fetch(`/api/friends/${friendId}/unfriend`, {
         method: "DELETE",
       })
-
       if (response.ok) {
-        // Remove friend from friends list
         setFriends((prev) => prev.filter((friend) => friend.id !== friendId))
-
-        // Remove the chat with this friend from chats list
         setChats((prev) =>
           prev.filter((chat) => {
             if (chat.type === "direct" && chat.participant?.id === friendId) {
@@ -297,12 +328,9 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
             return true
           }),
         )
-
-        // If currently viewing the chat with this friend, close it
         if (selectedChat?.type === "direct" && selectedChat.participant?.id === friendId) {
           setSelectedChat(null)
         }
-
         console.log("Friend removed successfully")
       } else {
         const errorData = await response.json()
@@ -323,12 +351,9 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
         },
         body: JSON.stringify(groupData),
       })
-
       if (response.ok) {
         const newGroup = await response.json()
         setGroups((prev) => [...prev, newGroup])
-
-        // Reload chats to include new group chat
         const chatsRes = await fetch("/api/chats")
         if (chatsRes.ok) {
           const chatsData = await chatsRes.json()
@@ -346,28 +371,24 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
     return messages.filter((msg) => msg.chatId === chatId)
   }
 
+  const safeStringIncludes = (str: string | undefined | null, searchTerm: string): boolean => {
+    if (!str || typeof str !== "string") return false
+    return str.toLowerCase().includes(searchTerm.toLowerCase())
+  }
+
   const filteredChats = chats.filter(
-    (chat) =>
-      chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase()),
+    (chat) => safeStringIncludes(chat.name, searchQuery) || safeStringIncludes(chat.lastMessage, searchQuery),
   )
-
   const filteredFriends = friends.filter(
-    (friend) =>
-      friend.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      friend.username.toLowerCase().includes(searchQuery.toLowerCase()),
+    (friend) => safeStringIncludes(friend.full_name, searchQuery) || safeStringIncludes(friend.username, searchQuery),
   )
-
-  const filteredGroups = groups.filter((group) => group.name.toLowerCase().includes(searchQuery.toLowerCase()))
-
+  const filteredGroups = groups.filter((group) => safeStringIncludes(group.name, searchQuery))
   const onlineFriends = friends.filter((friend) => friend.status === "online")
-
   const totalUnreadCount = chats.reduce((sum, chat) => sum + chat.unreadCount, 0)
 
   const handleSelectChat = (chat: Chat) => {
     setSelectedChat(chat)
     setShowMobileSidebar(false)
-    // Mark as read
     setChats((prev) => prev.map((c) => (c.id === chat.id ? { ...c, unreadCount: 0 } : c)))
   }
 
@@ -375,11 +396,50 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
     setSelectedChat(null)
   }
 
-  const handleStartChatWithFriend = (friend: Friend) => {
-    const chat = chats.find((c) => c.type === "direct" && c.participant?.id === friend.id)
+  const handleStartChatWithFriend = async (friend: Friend) => {
+    console.log("handleStartChatWithFriend called for friend:", friend)
+    let chat = chats.find((c) => c.type === "direct" && c.participant?.id === friend.id)
+    console.log("Existing chat found:", chat)
+
+    if (!chat) {
+      console.log("No existing chat found, attempting to create new direct chat...")
+      try {
+        const response = await fetch("/api/chats/direct", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ participantId: friend.id }),
+        })
+
+        if (response.ok) {
+          const newChat = await response.json()
+          console.log("New direct chat created:", newChat)
+          setChats((prev) => {
+            const updatedChats = [newChat, ...prev]
+            console.log("Chats state updated with new chat:", updatedChats)
+            return updatedChats
+          })
+          chat = newChat // Assign the newly created chat to the 'chat' variable
+        } else {
+          const errorData = await response.json()
+          console.error("Failed to create direct chat:", errorData)
+          // Optionally, show a user-friendly error message here
+          return // Exit if chat creation fails
+        }
+      } catch (error) {
+        console.error("Error creating direct chat:", error)
+        // Optionally, show a user-friendly error message here
+        return // Exit on network error
+      }
+    }
+
     if (chat) {
+      console.log("Selecting chat:", chat)
       handleSelectChat(chat)
       setActiveView("chats")
+    } else {
+      console.log("Chat is still null after creation attempt. This should not happen if creation was successful.")
     }
   }
 
@@ -397,11 +457,29 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
       onLogout()
     } catch (error) {
       console.error("Logout failed:", error)
-      onLogout() // Still logout on frontend even if API call fails
+      onLogout()
     }
   }
 
-  // Show loading state
+  // Function to reload friends and chats after a friend-related action
+  const reloadFriendsAndChats = async () => {
+    try {
+      const [friendsRes, chatsRes] = await Promise.all([fetch("/api/friends"), fetch("/api/chats")])
+      if (friendsRes.ok) {
+        const friendsData = await friendsRes.json()
+        setFriends(friendsData)
+      }
+      if (chatsRes.ok) {
+        const chatsData = await chatsRes.json()
+        setChats(
+          chatsData.sort((a: Chat, b: Chat) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+        )
+      }
+    } catch (error) {
+      console.error("Failed to reload data:", error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900">
@@ -413,14 +491,9 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
     )
   }
 
-  // Mobile: Show only chat window when chat is selected
   const showChatOnly = isMobile && selectedChat
-
-  // Mobile: Show only sidebar and list when no chat is selected
   const showListOnly = isMobile && !selectedChat
-
-  // Determine connection status for display
-  const connectionStatus = webSocketEnabled
+  const connectionStatus = realTimeEnabled
     ? isConnected
       ? "connected"
       : isConnecting
@@ -430,20 +503,15 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900 relative">
-      {/* PWA Components */}
       <PWAInstallBanner />
       <PWAUpdateBanner />
       <OfflineIndicator />
-
-      {/* Connection Status Indicator - Only show if WebSocket is enabled and having issues */}
-      {webSocketEnabled && !isConnected && (
+      {realTimeEnabled && !isConnected && (
         <div className="fixed top-4 right-4 z-50 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2">
           <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
           <span className="text-sm font-medium">{isConnecting ? "Connecting..." : "Reconnecting..."}</span>
         </div>
       )}
-
-      {/* Mobile Header */}
       {isMobile && (
         <MobileHeader
           currentUser={currentUser}
@@ -454,8 +522,6 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
           showMobileSidebar={showMobileSidebar}
         />
       )}
-
-      {/* Mobile Sidebar Overlay */}
       {isMobile && showMobileSidebar && (
         <div className="fixed inset-0 z-50 flex">
           <div className="flex w-full">
@@ -478,8 +544,6 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
           </div>
         </div>
       )}
-
-      {/* Desktop Sidebar - Hidden on mobile */}
       {!isMobile && (
         <DesktopSidebarV2
           currentUser={currentUser}
@@ -492,18 +556,13 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
           connectionStatus={connectionStatus}
         />
       )}
-
       <div className="flex-1 flex">
-        {/* Left Panel - Hidden on mobile when chat is selected */}
         <div
           className={`w-full md:w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col ${showChatOnly ? "hidden" : "block"} ${isMobile ? "pt-16" : ""}`}
         >
-          {/* Online Friends */}
           {activeView === "chats" && onlineFriends.length > 0 && (
             <OnlineFriends friends={onlineFriends} onStartChat={handleStartChatWithFriend} />
           )}
-
-          {/* Header with Search */}
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -527,7 +586,6 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
                           d="M15 17h5l-5 5-5-5h5v-12a1 1 0 011-1h4a1 1 0 011 1v12z"
                         />
                       </svg>
-                      {/* Add notification badge if there are pending requests */}
                     </button>
                     <button
                       onClick={() => setShowAddFriend(true)}
@@ -565,8 +623,6 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
             </div>
             <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
           </div>
-
-          {/* Content */}
           <div className="flex-1 overflow-y-auto">
             {activeView === "chats" && (
               <ChatList
@@ -574,7 +630,7 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
                 selectedChat={selectedChat}
                 onSelectChat={handleSelectChat}
                 searchQuery={searchQuery}
-                typingUsers={webSocketEnabled ? typingUsers : {}}
+                typingUsers={realTimeEnabled ? typingUsers : {}}
               />
             )}
             {activeView === "friends" && (
@@ -603,8 +659,6 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
             )}
           </div>
         </div>
-
-        {/* Right Panel - Chat Window */}
         <div className={`flex-1 ${showListOnly ? "hidden" : "block"} ${isMobile ? "pt-16" : ""}`}>
           {selectedChat ? (
             <ChatWindow
@@ -614,8 +668,8 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
               onSendMessage={handleSendMessage}
               onBack={isMobile ? handleBackToList : undefined}
               isMobile={isMobile}
-              onTyping={webSocketEnabled ? (isTyping) => sendTyping(selectedChat.id, isTyping) : undefined}
-              typingUsers={webSocketEnabled ? typingUsers[selectedChat.id] || [] : []}
+              onTyping={realTimeEnabled ? (isTyppping) => sendTyping(selectedChat.id, isTyppping) : undefined}
+              typingUsers={realTimeEnabled ? typingUsers[selectedChat.id] || [] : []}
               onUnfriend={handleUnfriend}
             />
           ) : (
@@ -660,7 +714,6 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
           )}
         </div>
       </div>
-
       {showCreateGroup && (
         <CreateGroupModal
           friends={friends}
@@ -668,33 +721,25 @@ export function MessengerApp({ currentUser, onLogout }: MessengerAppProps) {
           onCreateGroup={handleCreateGroup}
         />
       )}
-
       {showAddFriend && (
         <AddFriendModal
           onClose={() => setShowAddFriend(false)}
-          onFriendRequestSent={() => {
-            // Optional: Show success message or update UI
-            console.log("Friend request sent!")
+          onFriendRequestSent={async () => {
+            // This callback is triggered when a friend request is successfully sent from within the modal.
+            // We need to reload friends and chats to update the UI.
+            await reloadFriendsAndChats()
+            console.log("Friend request sent and data reloaded!")
           }}
         />
       )}
       {showFriendRequests && (
         <FriendRequestsModal
           onClose={() => setShowFriendRequests(false)}
-          onRequestHandled={() => {
-            // Reload friends list
-            const loadFriends = async () => {
-              try {
-                const response = await fetch("/api/friends")
-                if (response.ok) {
-                  const friendsData = await response.json()
-                  setFriends(friendsData)
-                }
-              } catch (error) {
-                console.error("Failed to reload friends:", error)
-              }
-            }
-            loadFriends()
+          onRequestHandled={async () => {
+            // This callback is triggered when a friend request is accepted or rejected.
+            // We need to reload friends and chats to update the UI.
+            await reloadFriendsAndChats()
+            console.log("Friend request handled and data reloaded!")
           }}
         />
       )}

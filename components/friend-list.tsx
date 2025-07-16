@@ -119,7 +119,7 @@ export function FriendsList({ friends, onAddFriend, onStartChat, onUnfriend, sea
             {/* Avatar */}
             <div className="relative">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg group-hover:scale-105 transition-transform">
-                {friend.fullName.charAt(0).toUpperCase()}
+                {friend.full_name.charAt(0).toUpperCase()}
               </div>
               {friend.status === "online" && (
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full animate-pulse">
@@ -131,7 +131,7 @@ export function FriendsList({ friends, onAddFriend, onStartChat, onUnfriend, sea
             {/* Friend Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2">
-                <h3 className="font-semibold text-gray-900 dark:text-white truncate">{friend.fullName}</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white truncate">{friend.full_name}</h3>
                 {friend.status === "online" && (
                   <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-0 text-xs animate-pulse">
                     Online

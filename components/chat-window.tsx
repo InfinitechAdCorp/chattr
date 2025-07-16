@@ -107,7 +107,7 @@ export function ChatWindow({
     if (chat.type === "group") {
       return chat.name
     }
-    return chat.participant?.fullName || chat.name
+    return chat.participant?.full_name || chat.name
   }
 
   const getChatSubtitle = () => {

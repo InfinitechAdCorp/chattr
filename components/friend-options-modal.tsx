@@ -57,14 +57,14 @@ export function FriendOptionsModal({ friend, onClose, onStartChat, onUnfriend }:
             <div className="flex items-center space-x-3">
               <div className="relative">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
-                  {friend.fullName.charAt(0).toUpperCase()}
+                  {friend.full_name.charAt(0).toUpperCase()}
                 </div>
                 {friend.status === "online" && (
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></div>
                 )}
               </div>
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">{friend.fullName}</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">{friend.full_name}</h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">@{friend.username}</p>
               </div>
             </div>

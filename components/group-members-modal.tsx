@@ -45,7 +45,7 @@ export function GroupMembersModal({ group, onClose, currentUserId }: GroupMember
             groupMembers.push({
               id: currentUserId,
               username: "You",
-              fullName: "You",
+              full_name: "You",
               status: "online",
               role: currentUserId === group.createdBy ? "admin" : "member",
               joinedAt: new Date().toISOString(),
@@ -121,7 +121,7 @@ export function GroupMembersModal({ group, onClose, currentUserId }: GroupMember
                       <div key={member.id} className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                         <div className="relative">
                           <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-white font-semibold">
-                            {member.fullName.charAt(0).toUpperCase()}
+                            {member.full_name.charAt(0).toUpperCase()}
                           </div>
                           {member.status === "online" && (
                             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full"></div>
@@ -130,7 +130,7 @@ export function GroupMembersModal({ group, onClose, currentUserId }: GroupMember
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-2">
                             <p className="font-semibold text-gray-900 dark:text-white truncate">
-                              {member.id === currentUserId ? "You" : member.fullName}
+                              {member.id === currentUserId ? "You" : member.full_name}
                             </p>
                             <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-0 text-xs">
                               Admin
@@ -170,7 +170,7 @@ export function GroupMembersModal({ group, onClose, currentUserId }: GroupMember
                       <div key={member.id} className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                         <div className="relative">
                           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
-                            {member.fullName.charAt(0).toUpperCase()}
+                            {member.full_name.charAt(0).toUpperCase()}
                           </div>
                           {member.status === "online" && (
                             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full"></div>
@@ -178,7 +178,7 @@ export function GroupMembersModal({ group, onClose, currentUserId }: GroupMember
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-900 dark:text-white truncate">
-                            {member.id === currentUserId ? "You" : member.fullName}
+                            {member.id === currentUserId ? "You" : member.full_name}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                             @{member.username} • {member.status}
@@ -206,7 +206,7 @@ export function GroupMembersModal({ group, onClose, currentUserId }: GroupMember
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <span>Created by {admins.find(a => a.id === group.createdBy)?.fullName || 'Unknown'}</span>
+            <span>Created by {admins.find(a => a.id === group.createdBy)?.full_name || 'Unknown'}</span>
             <span>{members.length} total members</span>
           </div>
         </div>

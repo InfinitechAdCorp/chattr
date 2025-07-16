@@ -7,7 +7,7 @@ import type { GroupsListProps } from "@/types"
 export function GroupsList({ groups, friends, onCreateGroup, onSelectGroup }: GroupsListProps) {
   const getFriendName = (friendId: number): string => {
     const friend = friends.find((f) => f.id === friendId)
-    return friend ? friend.fullName : "Unknown"
+    return friend ? friend.full_name : "Unknown"
   }
 
   return (

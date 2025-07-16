@@ -58,7 +58,7 @@ export const friendsApi = {
 
   addFriend: (friendData: {
     username: string
-    fullName: string
+    full_Name: string
     email?: string
   }) =>
     apiRequest("/api/friends", {

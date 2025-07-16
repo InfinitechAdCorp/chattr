@@ -8,7 +8,7 @@ export interface User {
   id: number
   username: string
   email: string
-  fullName: string
+  full_name: string
   password?: string
   status?: "online" | "offline"
 }
@@ -16,7 +16,7 @@ export interface User {
 export interface Friend {
   id: number
   username: string
-  fullName: string
+  full_name: string
   status: "online" | "offline"
 }
 
@@ -39,12 +39,13 @@ export interface Chat {
 }
 
 export interface Message {
-  id: number
+  id: number | string // Allow string for optimistic client-side IDs
   chatId: string
   senderId: number
   senderName: string
   content: string
   timestamp: string
+  status?: "sending" | "sent" | "failed" // New status field
 }
 
 export interface MessengerAppProps {
@@ -97,7 +98,13 @@ export interface CreateGroupModalProps {
   onCreateGroup: (groupData: { name: string; members: number[] }) => void
 }
 
+// Corrected AddFriendModalProps to match AddFriendModal.tsx
 export interface AddFriendModalProps {
   onClose: () => void
-  onAddFriend: (friendData: { username: string; fullName: string; email: string }) => void
+  onFriendRequestSent: () => void
+}
+
+export interface FriendRequestsModalProps {
+  onClose: () => void
+  onRequestHandled: () => void
 }

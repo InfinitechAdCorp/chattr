@@ -43,7 +43,7 @@ export function WelcomeScreen({ currentUser, onGetStarted }: WelcomeScreenProps)
             Welcome to Messenger
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-2">
-            Hello, <span className="font-semibold text-blue-600 dark:text-blue-400">{currentUser.fullName}</span>! 👋
+            Hello, <span className="font-semibold text-blue-600 dark:text-blue-400">{currentUser.full_name}</span>! 👋
           </p>
           <p className="text-lg text-gray-500 dark:text-gray-400">
             Ready to connect with friends and start amazing conversations?
